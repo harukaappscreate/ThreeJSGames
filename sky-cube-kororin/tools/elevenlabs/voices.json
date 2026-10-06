@@ -14,18 +14,18 @@
   "wait_seconds": 0.4,
   "speakers": {
     "narrator": {
-      "ja": { "voice_id": "PUT_NARRATOR_JA_VOICE_ID" },
-      "en": { "voice_id": "PUT_NARRATOR_EN_VOICE_ID" },
+      "ja": { "voice_id": "dPcjEUo6wYUfUq2tFJwq" },
+      "en": { "voice_id": "JBFqnCBsd6RMkjVDRZzb" },
       "voice_settings": { "stability": 0.55, "similarity_boost": 0.75, "style": 0.25, "use_speaker_boost": true }
     },
     "kororin": {
-      "ja": { "voice_id": "PUT_KORORIN_JA_VOICE_ID" },
-      "en": { "voice_id": "PUT_KORORIN_EN_VOICE_ID" },
+      "ja": { "voice_id": "OSwaPSNdfituxkWcjlkR" },
+      "en": { "voice_id": "cgSgspJ2msm6clMCkdW9" },
       "voice_settings": { "stability": 0.4, "similarity_boost": 0.75, "style": 0.5, "use_speaker_boost": true }
     },
     "yumeboshi": {
-      "ja": { "voice_id": "PUT_YUMEBOSHI_JA_VOICE_ID" },
-      "en": { "voice_id": "PUT_YUMEBOSHI_EN_VOICE_ID" },
+      "ja": { "voice_id": "fUjY9K2nAIwlALOwSiwc" },
+      "en": { "voice_id": "EXAVITQu4vr4xnSDxMaL" },
       "voice_settings": { "stability": 0.6, "similarity_boost": 0.75, "style": 0.3, "use_speaker_boost": true }
     }
   }
