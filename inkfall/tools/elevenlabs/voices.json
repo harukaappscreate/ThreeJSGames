@@ -1,0 +1,45 @@
+{
+  "_comment": "ElevenLabs の設定。voice_id は ElevenLabs の Voices 画面でコピーして貼りつけてください(前作のボイス ID は流用していません)。",
+  "models": {
+    "tts": "eleven_v4",
+    "sfx": "eleven_text_to_sound_v2",
+    "music": "music_v1"
+  },
+  "output_format": "mp3_44100_128",
+  "send_language_code": true,
+  "use_emotion_tags": false,
+  "force_instrumental": true,
+  "sfx_prompt_influence": 0.5,
+  "seed": null,
+  "wait_seconds": 0.4,
+  "speakers": {
+    "announcer": {
+      "ja": {
+        "voice_id": "PUT_ANNOUNCER_JA_VOICE_ID"
+      },
+      "en": {
+        "voice_id": "PUT_ANNOUNCER_EN_VOICE_ID"
+      },
+      "voice_settings": {
+        "stability": 0.35,
+        "similarity_boost": 0.75,
+        "style": 0.6,
+        "use_speaker_boost": true
+      }
+    },
+    "navi": {
+      "ja": {
+        "voice_id": "PUT_NAVI_JA_VOICE_ID"
+      },
+      "en": {
+        "voice_id": "PUT_NAVI_EN_VOICE_ID"
+      },
+      "voice_settings": {
+        "stability": 0.55,
+        "similarity_boost": 0.75,
+        "style": 0.3,
+        "use_speaker_boost": true
+      }
+    }
+  }
+}
