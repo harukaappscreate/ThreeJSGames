@@ -103,6 +103,9 @@ python3 generate_audio.py all --lang ja,en
 python3 generate_audio.py status
 ```
 
+- 種類ごとに作る場合:`python3 generate_audio.py voice --lang ja,en` / `sfx` / `bgm`
+- できたファイルは飛ばすので、途中で止まっても同じコマンドをもう一度実行すれば続きから作れます。失敗したものは最後に一覧表示されます。
+
 日本語の読み上げ文(`tts.ja`)はすべてひらがなです。字幕(`text.ja`)は漢字かな交じりで表示します。
 
 ---

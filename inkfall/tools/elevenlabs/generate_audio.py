@@ -117,6 +117,20 @@ def post_audio(url: str, body: dict, api_key: str, retries: int = 4) -> bytes:
     raise RuntimeError("リトライ回数を こえました")
 
 
+FAILED: list[str] = []
+
+
+def fetch_and_save(label: str, url: str, body: dict, api_key: str, out: Path) -> bool:
+    """1 件ぶん 生成して 保存。失敗しても 止めずに 記録して 次へ 進む。"""
+    try:
+        save(out, post_audio(url, body, api_key))
+        return True
+    except (RuntimeError, urllib.error.URLError, OSError) as e:
+        print(f"    ✖ {label}: {e}")
+        FAILED.append(f"{label}: {e}")
+        return False
+
+
 def save(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(payload)
@@ -161,8 +175,7 @@ def gen_voice(args, manifest, script, cfg, api_key):
             print(f"  ▶ {lid} ({line['speaker']}): {text}")
             if args.dry_run:
                 continue
-            payload = post_audio(f"{API}/text-to-speech/{vid}?output_format={fmt}", body, api_key)
-            save(out, payload)
+            fetch_and_save(f"voice/{lang}/{lid}", f"{API}/text-to-speech/{vid}?output_format={fmt}", body, api_key, out)
             time.sleep(cfg.get("wait_seconds", 0.4))
 
 
@@ -185,8 +198,7 @@ def gen_sfx(args, manifest, cfg, api_key):
         print(f"  ▶ {sid}: {e['prompt'][:70]}…")
         if args.dry_run:
             continue
-        payload = post_audio(f"{API}/sound-generation?output_format={fmt}", body, api_key)
-        save(out, payload)
+        fetch_and_save(f"sfx/{sid}", f"{API}/sound-generation?output_format={fmt}", body, api_key, out)
         time.sleep(cfg.get("wait_seconds", 0.4))
 
 
@@ -209,8 +221,7 @@ def gen_bgm(args, manifest, cfg, api_key):
         print(f"  ▶ {bid} ({body['music_length_ms'] // 1000}s): {e['prompt'][:70]}…")
         if args.dry_run:
             continue
-        payload = post_audio(f"{API}/music?output_format={fmt}", body, api_key)
-        save(out, payload)
+        fetch_and_save(f"bgm/{bid}", f"{API}/music?output_format={fmt}", body, api_key, out)
         time.sleep(cfg.get("wait_seconds", 1.0))
 
 
@@ -308,8 +319,14 @@ def main():
             gen_sfx(args, manifest, cfg, api_key)
         if args.command in ("bgm", "all"):
             gen_bgm(args, manifest, cfg, api_key)
-    except RuntimeError as e:
-        sys.exit(f"\nエラー: {e}\n(モデル名やパラメータは voices.json で 変更できます)")
+    except KeyboardInterrupt:
+        sys.exit("\n中断しました。もう一度 実行すると、できた ファイルは とばして つづきから 作ります。")
+    if FAILED:
+        print(f"\n✖ {len(FAILED)} 件 失敗しました(ほかは 保存ずみ):")
+        for f in FAILED:
+            print(f"   - {f[:200]}")
+        sys.exit("\nもう一度 実行すると 失敗した ものだけ 作りなおします。"
+                 "(モデル名や パラメータは voices.json で 変更できます)")
     print("\nおわり! ゲームを ひらきなおすと 新しい 音が つかわれます。")
 
 
