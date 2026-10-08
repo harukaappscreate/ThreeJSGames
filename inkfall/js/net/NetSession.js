@@ -25,6 +25,8 @@ export class NetSession extends EventTarget {
     this._subs = [];
     this._waiting = null;
     this.started = false;
+    this.myReady = false;      // 自分の準備完了(ゲスト側の正本)
+    this._lastSync = 0;
   }
 
   get available() { return WD.available; }
@@ -75,6 +77,7 @@ export class NetSession extends EventTarget {
 
   update() {
     if (!this.active) return;
+    this._syncPeers();
     WD.poll((from, payload) => {
       if (!payload?.byteLength) return;
       if (!this.users.some((u) => u.userId === from)) return; // ロビー外からは受け取らない
@@ -96,11 +99,19 @@ export class NetSession extends EventTarget {
     on('LOBBY_USERS_UPDATED', (p) => this._usersChanged(p));
     on('LOBBY_DATA_UPDATED', (p) => { if (this.active) { this.metadata = { ...p }; this.mode = p.mode || this.mode; this.changed(); } });
     on('LOBBY_KICKED', (p) => { if (p.lobbyId === this.lobbyId) { this._reset(); this.error = 'kicked'; this.changed(); this.dispatchEvent(new Event('closed')); } });
-    for (const n of ['P2P_CONNECTION_ESTABLISHED', 'P2P_PEER_RECONNECTED']) on(n, (p) => { this.reachable.add(p.userId); this.changed(); });
-    for (const n of ['P2P_PEER_DISCONNECTED', 'P2P_CONNECTION_FAILED']) on(n, (p) => { this.reachable.delete(p.userId); this.changed(); });
+    for (const n of ['P2P_CONNECTION_ESTABLISHED', 'P2P_PEER_RECONNECTED']) on(n, (p) => this._peerUp(p?.userId));
+    for (const n of ['P2P_PEER_DISCONNECTED', 'P2P_CONNECTION_FAILED', 'P2P_PEER_RECONNECTING']) on(n, (p) => { this.reachable.delete(p?.userId); this.changed(); });
 
     // 名簿のやりとり
-    this.on('roster', (m, from) => { if (from === this.hostId) { this.roster = m.roster; this.mode = m.mode; this.changed(); } });
+    this.on('roster', (m, from) => {
+      if (from !== this.hostId || this.isHost) return;
+      this.roster = m.roster;
+      this.mode = m.mode;
+      // ホストの名簿と自分の準備状態がずれていたら送り直す
+      const me = this.roster.find((r) => r.id === this.selfId);
+      if (me && me.ready !== this.myReady) { me.ready = this.myReady; this.send(this.hostId, { k: 'ready', ready: this.myReady }); }
+      this.changed();
+    });
     this.on('ready', (m, from) => { if (this.isHost) { const r = this.roster.find((x) => x.id === from); if (r) { r.ready = !!m.ready; this._pushRoster(); } } });
     this.on('team', (m, from) => {
       if (!this.isHost) return;
@@ -118,11 +129,49 @@ export class NetSession extends EventTarget {
     this.users = p.users || [];
     this.metadata = { ...(p.metadata || {}) };
     this.mode = this.metadata.mode || 'turf';
-    this.reachable.clear();
+    this.myReady = false;
     this._waiting.resolve();
+    // P2P はこのあと少し遅れてつながる。つながる前に送ったものは SDK に捨てられるので、
+    // 名簿・あいさつは _peerUp(接続できたとき)で送る。
     if (this.isHost) this._rebuildRoster();
-    else setTimeout(() => this.send(this.hostId, { k: 'hello', name: WD.username() || 'Player', v: CONFIG.netVersion }), 300);
+    this._syncPeers(true);
     this.changed();
+  }
+
+  /** 相手との P2P が使えるようになった */
+  _peerUp(id) {
+    if (!id || !this.active || id === this.selfId) return;
+    const fresh = !this.reachable.has(id);
+    this.reachable.add(id);
+    if (fresh) {
+      if (this.isHost) this.send(id, { k: 'roster', roster: this.roster, mode: this.mode });
+      else if (id === this.hostId) this._greetHost();
+    }
+    this.changed();
+  }
+
+  _greetHost() {
+    this.send(this.hostId, { k: 'hello', name: WD.username() || 'Player', v: CONFIG.netVersion });
+    this.send(this.hostId, { k: 'ready', ready: this.myReady });
+  }
+
+  /**
+   * 接続状態を SDK に直接たずねて合わせる(イベントの取りこぼし対策)。
+   * あわせて、ロビー待機中はホストが名簿を、ゲストがあいさつを定期的に送り直す。
+   */
+  _syncPeers(force = false) {
+    const now = performance.now();
+    if (!force && now - this._lastSync < 500) return;
+    const tick = Math.floor(now / 2000) !== Math.floor(this._lastSync / 2000);
+    this._lastSync = now;
+    for (const u of this.others) {
+      const ok = WD.peerReady(u.userId);
+      if (ok === true) this._peerUp(u.userId);
+      else if (ok === false && this.reachable.delete(u.userId)) this.changed();
+    }
+    if (!tick || (this.metadata.phase && this.metadata.phase !== 'waiting')) return;
+    if (this.isHost) { if (this.others.length) this.send(null, { k: 'roster', roster: this.roster, mode: this.mode }); }
+    else if (this.reachable.has(this.hostId) && !this.roster.some((r) => r.id === this.selfId)) this._greetHost();
   }
 
   _usersChanged(p) {
@@ -249,6 +298,7 @@ export class NetSession extends EventTarget {
   }
 
   setReady(ready) {
+    this.myReady = !!ready;
     const me = this.roster.find((r) => r.id === this.selfId);
     if (me) me.ready = ready;
     if (this.isHost) this._pushRoster(); else this.send(this.hostId, { k: 'ready', ready });

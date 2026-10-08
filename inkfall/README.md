@@ -60,6 +60,7 @@ http://localhost:8766/?fakesdk=bob
 - 自動テストも用意しています。
   - `npm test`(通信形式の単体テスト)
   - `npm run e2e`(Playwright で 2 タブ対戦:ロビー → 開始 → 同期チェック)
+- にせ SDK は本物と同じく、入室から少し遅れて P2P がつながります(既定 1.5 秒。`&p2pdelay=4000` で変更)。つながる前の送信は捨てられます。
 - その他の URL パラメータ:`?scene=match&mode=turf|tag|training|challenge`、`?autostart=1`
 
 ---

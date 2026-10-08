@@ -22,11 +22,30 @@ export function installFakeSdk(name) {
   const boards = new Map();
   let lobby = null;              // 参加中のロビー(ホストなら正本)
   let pendingJoin = null;
+  // 本物と同じく、P2P は入室から少し遅れてつながる。つながる前の送信は捨てられる。
+  const P2P_DELAY = Number(new URLSearchParams(location.search).get('p2pdelay') ?? 1500);
+  const established = new Set();
+  const timers = new Map();
 
   const emit = (ev, payload) => { for (const f of handlers.get(ev) || []) setTimeout(() => f(payload), 0); };
   const isHost = () => lobby && lobby.hostId === me;
   const announce = () => { if (isHost()) bc.postMessage({ t: 'lobby', lobby }); };
   const user = (id) => ({ userId: id, username: id.replace(/^u_/, '') });
+  const connect = (u) => {
+    if (u.userId === me || established.has(u.userId) || timers.has(u.userId)) return;
+    timers.set(u.userId, setTimeout(() => {
+      timers.delete(u.userId);
+      if (!lobby?.users.some((x) => x.userId === u.userId)) return;
+      established.add(u.userId);
+      emit(EVENTS.P2P_CONNECTION_ESTABLISHED, u);
+    }, P2P_DELAY));
+  };
+  const disconnect = (id) => {
+    clearTimeout(timers.get(id));
+    timers.delete(id);
+    if (established.delete(id)) emit(EVENTS.P2P_PEER_DISCONNECTED, user(id));
+  };
+  const dropAll = () => { for (const id of [...established, ...timers.keys()]) disconnect(id); };
 
   setInterval(announce, 800);
 
@@ -38,7 +57,7 @@ export function installFakeSdk(name) {
         lobby = structuredClone(m.lobby);
         pendingJoin = null;
         emit(EVENTS.LOBBY_JOINED, { lobbyId: lobby.id, hostId: lobby.hostId, users: lobby.users, metadata: lobby.data });
-        for (const u of lobby.users) if (u.userId !== me) emit(EVENTS.P2P_CONNECTION_ESTABLISHED, u);
+        for (const u of lobby.users) connect(u);
         return;
       }
       if (lobby && m.lobby.id === lobby.id && !isHost()) {
@@ -46,15 +65,15 @@ export function installFakeSdk(name) {
         const after = new Set(m.lobby.users.map((u) => u.userId));
         const dataChanged = JSON.stringify(lobby.data) !== JSON.stringify(m.lobby.data);
         lobby = structuredClone(m.lobby);
-        for (const u of m.lobby.users) if (!before.has(u.userId)) { emit(EVENTS.LOBBY_USERS_UPDATED, { ...u, changeType: 'JOINED' }); emit(EVENTS.P2P_CONNECTION_ESTABLISHED, u); }
-        for (const id of before) if (!after.has(id)) { emit(EVENTS.LOBBY_USERS_UPDATED, { ...user(id), changeType: 'LEFT' }); emit(EVENTS.P2P_PEER_DISCONNECTED, user(id)); }
+        for (const u of m.lobby.users) if (!before.has(u.userId)) { emit(EVENTS.LOBBY_USERS_UPDATED, { ...u, changeType: 'JOINED' }); connect(u); }
+        for (const id of before) if (!after.has(id)) { emit(EVENTS.LOBBY_USERS_UPDATED, { ...user(id), changeType: 'LEFT' }); disconnect(id); }
         if (dataChanged) emit(EVENTS.LOBBY_DATA_UPDATED, { ...lobby.data });
       }
     } else if (m.t === 'join' && isHost() && m.lobbyId === lobby.id) {
       if (!lobby.users.some((u) => u.userId === m.user.userId) && lobby.users.length < lobby.max) {
         lobby.users.push(m.user);
         emit(EVENTS.LOBBY_USERS_UPDATED, { ...m.user, changeType: 'JOINED' });
-        emit(EVENTS.P2P_CONNECTION_ESTABLISHED, m.user);
+        connect(m.user);
       }
       announce();
     } else if (m.t === 'leave' && lobby && m.lobbyId === lobby.id) {
@@ -62,16 +81,17 @@ export function installFakeSdk(name) {
         // ホストがいなくなった
         const id = lobby.id;
         lobby = null;
+        dropAll();
         emit(EVENTS.LOBBY_KICKED, { lobbyId: id, reason: 'ERROR' });
         return;
       }
       if (isHost()) {
         lobby.users = lobby.users.filter((u) => u.userId !== m.userId);
         emit(EVENTS.LOBBY_USERS_UPDATED, { ...user(m.userId), changeType: 'LEFT' });
-        emit(EVENTS.P2P_PEER_DISCONNECTED, user(m.userId));
+        disconnect(m.userId);
         announce();
       }
-    } else if (m.t === 'p2p' && m.from !== me && (m.to === me || (m.to === null && lobby && m.lobbyId === lobby.id))) {
+    } else if (m.t === 'p2p' && m.from !== me && (m.to === me || (m.to === null && lobby && m.lobbyId === lobby.id)) && established.has(m.from)) {
       queues[m.ch].push({ fromUserId: m.from, channel: m.ch, payload: new Uint8Array(m.payload) });
     }
   };
@@ -108,6 +128,7 @@ export function installFakeSdk(name) {
     async leaveLobby(id) {
       if (lobby) bc.postMessage({ t: 'leave', lobbyId: lobby.id, userId: me });
       lobby = null;
+      dropAll();
       return ok(id);
     },
     async listAvailableLobbies() {
@@ -129,8 +150,9 @@ export function installFakeSdk(name) {
       return true;
     },
     async getLobbyInviteLink() { return ok(`${location.origin}${location.pathname}?fakesdk=friend&lobby=${lobby?.id || ''}`); },
-    sendP2PMessage(to, ch = 0, reliable = true, payload) { bc.postMessage({ t: 'p2p', from: me, to, ch, lobbyId: lobby?.id, payload: Array.from(payload) }); return true; },
-    broadcastP2PMessage(ch = 0, reliable = true, payload) { bc.postMessage({ t: 'p2p', from: me, to: null, ch, lobbyId: lobby?.id, payload: Array.from(payload) }); return true; },
+    p2pManager: { isPeerReady: (id) => established.has(id) },
+    sendP2PMessage(to, ch = 0, reliable = true, payload) { if (!established.has(to)) return false; bc.postMessage({ t: 'p2p', from: me, to, ch, lobbyId: lobby?.id, payload: Array.from(payload) }); return true; },
+    broadcastP2PMessage(ch = 0, reliable = true, payload) { if (!established.size) return false; bc.postMessage({ t: 'p2p', from: me, to: null, ch, lobbyId: lobby?.id, payload: Array.from(payload) }); return true; },
     readP2PMessageFromChannel: (ch) => queues[ch]?.shift() || null,
     async updateUserPresence() { return ok(true); },
     async getOrCreateLeaderboard(n) { if (!boards.has(n)) boards.set(n, []); return ok({ id: n }); },

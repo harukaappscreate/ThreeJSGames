@@ -164,7 +164,10 @@ export class LobbyScene extends BaseScene {
       actions.append(start);
     }
     p.append(actions);
-    p.append(el('div', { class: 'lp-note', text: n.isHost ? (canStart ? t('hostCanStart') : t('waitReady')) : t('waitHost') }));
+    const note = n.isHost
+      ? (canStart ? t('hostCanStart') : (n.allConnected ? t('waitReady') : t('waitPeers')))
+      : (me ? t('waitHost') : t('connectingHost'));
+    p.append(el('div', { class: 'lp-note', text: note }));
     p.append(el('div', { class: 'lp-foot' }, this.ui.button({ label: t('leave'), icon: 'back', cls: 'danger small', sfx: 'ui_back', onClick: async () => { await n.leave(); this.render(); } })));
   }
 

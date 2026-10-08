@@ -59,6 +59,14 @@ class WavedashBridge {
     try { return this.sdk?.getP2PMaxPayloadSize?.() ?? 2004; } catch { return 2004; }
   }
 
+  /** P2P の通り道が開いているか(わからない SDK では null) */
+  peerReady(id) {
+    try {
+      const f = this.sdk?.p2pManager?.isPeerReady;
+      return typeof f === 'function' ? !!f.call(this.sdk.p2pManager, id) : null;
+    } catch { return null; }
+  }
+
   send(to, reliable, bytes) {
     const w = this.sdk;
     if (!w || bytes.byteLength > this.maxPayload) return false;

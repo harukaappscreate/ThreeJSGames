@@ -94,6 +94,8 @@
   "hostCanStart": "Everyone is ready. Start when you like!",
   "waitReady": "Waiting for everyone to be ready…",
   "waitHost": "Waiting for the host to start…",
+  "waitPeers": "Connecting to players…",
+  "connectingHost": "Connecting to the host…",
   "hostLeft": "The host left. The match has ended.",
   "err.generic": "Something went wrong. Please try again.",
   "err.timeout": "Connection timed out.",
