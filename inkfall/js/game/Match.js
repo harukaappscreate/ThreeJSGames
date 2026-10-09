@@ -621,7 +621,8 @@ export class Match {
   _endMatch() {
     if (!this.isHost || this.ended) return;
     const results = this.results();
-    this.net.send({ k: 'end', results });
+    // 送信に失敗しても、ホスト自身は必ず結果画面へ進む
+    try { this.net.send({ k: 'end', results }); } catch (e) { console.error('[match] end', e); }
     this._finish(results);
   }
 
@@ -646,7 +647,8 @@ export class Match {
       const ta = this.roundLog.reduce((s, r) => s + r.a, 0), tb = this.roundLog.reduce((s, r) => s + r.b, 0);
       winner = ta > tb ? 1 : tb > ta ? 2 : 0;
     }
-    return { mode: this.mode, winner, wins: this.wins, rounds: this.roundLog, players, owners: Array.from(this.arena.owner) };
+    // 塗りの状態(数千マス)は送らない。各自の画面が同じ塗りを持っているので、アウトロはそれを使う
+    return { mode: this.mode, winner, wins: this.wins, rounds: this.roundLog, players };
   }
 
   /** 参加者が抜けた → その選手は CPU が引き継ぐ(ホスト) */

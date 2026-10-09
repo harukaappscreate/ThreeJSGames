@@ -9,7 +9,7 @@
   "scripts": {
     "serve": "python3 -m http.server 8766",
     "test": "node --test tests/wire.test.mjs",
-    "e2e": "node tests/mp-fake-sdk.mjs",
+    "e2e": "node tests/mp-fake-sdk.mjs && node tests/mp-match-end.mjs turf && node tests/mp-match-end.mjs tag",
     "dist": "python3 tools/make_dist.py"
   }
 }

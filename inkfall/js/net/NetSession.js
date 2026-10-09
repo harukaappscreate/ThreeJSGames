@@ -54,7 +54,8 @@ export class NetSession extends EventTarget {
 
   send(to, obj) {
     if (!this.active) return false;
-    const bytes = encodeJSON(obj);
+    let bytes;
+    try { bytes = encodeJSON(obj); } catch (e) { console.error('[net]', e.message); return false; }
     return to ? WD.send(to, true, bytes) : WD.broadcast(true, bytes);
   }
 

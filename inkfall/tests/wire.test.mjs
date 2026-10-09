@@ -49,3 +49,16 @@ test('decoders survive garbage', () => {
   assert.equal(decodeStates(new Uint8Array([1, 0, 0, 9])), null);
   assert.equal(decodePaint(new Uint8Array([2, 0, 50])), null);
 });
+
+test('match results fit in one P2P message even with 8 long Japanese names', () => {
+  const name = 'あいうえおかきくけこさしすせそたちつてと'; // 20 文字(UTF-8 で 60 バイト)
+  const players = Array.from({ length: 8 }, (_, i) => ({ idx: i, name: `${name}`, team: (i % 2) + 1, bot: false, color: '#ff3fa4', cells: 1234, inks: 99, outs: 99, stamps: 99 }));
+  const rounds = [{ a: 1800, b: 1700, tot: 3696, winner: 1 }, { a: 1700, b: 1800, tot: 3696, winner: 2 }];
+  for (const results of [
+    { mode: 'turf', winner: 1, wins: [0, 1, 1], rounds, players },
+    { mode: 'tag', winner: 3, order: [0, 1, 2, 4, 5, 6, 7], players },
+  ]) {
+    const bytes = encodeJSON({ k: 'end', results });
+    assert.ok(bytes.byteLength <= 2004, `${results.mode}: ${bytes.byteLength}B`);
+  }
+});
