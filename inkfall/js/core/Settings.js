@@ -13,6 +13,7 @@ const DEFAULTS = {
   language: 'auto',      // auto / en / ja
   quality: 'auto',
   reduceMotion: false,
+  effects: 'normal',     // soft / normal / vivid
   subtitles: true,
   colorMode: 'standard', // standard / accessible
   sensitivity: 1.0,
@@ -65,6 +66,8 @@ class Settings extends EventTarget {
     if (coarse) return (navigator.deviceMemory || 4) <= 3 ? 'low' : 'medium';
     return 'high';
   }
+
+  fx() { return CONFIG.effects[this.data.effects] || CONFIG.effects.normal; }
 
   teams() { return CONFIG.teams[this.data.colorMode] || CONFIG.teams.standard; }
 

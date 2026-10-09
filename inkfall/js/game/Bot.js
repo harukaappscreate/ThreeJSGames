@@ -27,6 +27,12 @@ export class Bot {
     this.basis = { forward: new THREE.Vector3(), right: new THREE.Vector3() };
     this.fireWant = false;
     this.jitter = new THREE.Vector3();
+    // 撃ち合いの「人間らしさ」
+    this.react = 0;                    // 敵を見つけてから撃ち始めるまで
+    this.aimErr = new THREE.Vector3(); // ゆっくり変わる照準のずれ
+    this.errT = 0;
+    this.burst = 0;                    // 連射している残り時間
+    this.rest = 0;                     // 連射の合間
   }
 
   update(dt) {
@@ -58,11 +64,11 @@ export class Bot {
     return d;
   }
 
-  _aimAt(point, spread = 0) {
+  _aimAt(point, spread = 0, dt = 1 / 60, turn = 14) {
     const a = this.a;
     _b.subVectors(point, a.pos).normalize();
     if (spread) { this.jitter.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spread); _b.add(this.jitter).normalize(); }
-    a.aim.lerp(_b, 0.35).normalize();
+    a.aim.lerp(_b, 1 - Math.exp(-dt * turn)).normalize();
   }
 
   _randomFlip() {
@@ -84,7 +90,8 @@ export class Bot {
   _nearestEnemy(range, needLos = true) {
     let best = null, bd = range;
     for (const o of this.m.actors) {
-      if (o === this.a || !o.alive || o.out || o.team === this.a.team) continue;
+      // 復活直後の無敵中の相手はねらわない
+      if (o === this.a || !o.alive || o.out || o.team === this.a.team || o.shield > 0) continue;
       const d = o.pos.distanceTo(this.a.pos);
       if (d < bd && (!needLos || this.m.arena.lineOfSight(this.a.pos, o.pos))) { bd = d; best = o; }
     }
@@ -96,10 +103,12 @@ export class Bot {
     const a = this.a, m = this.m, arena = m.arena;
     if (this.think <= 0) {
       this.think = 0.6 + Math.random() * 0.8;
+      const prev = this.enemy;
       this.enemy = this._nearestEnemy(16);
+      if (this.enemy && this.enemy !== prev) this.react = 0.35 + (1 - this.skill) * 0.6 + Math.random() * 0.25;
       if (!this.target || Math.random() < 0.35 || (this.target.cell >= 0 && arena.owner[this.target.cell] === a.team)) this._pickTarget();
     }
-    if (this.enemy && (!this.enemy.alive || this.enemy.pos.distanceTo(a.pos) > 22)) this.enemy = null;
+    if (this.enemy && (!this.enemy.alive || this.enemy.out || this.enemy.shield > 0 || this.enemy.pos.distanceTo(a.pos) > 22)) this.enemy = null;
 
     // 移動
     if (this.target) {
@@ -120,18 +129,37 @@ export class Bot {
 
     // ねらい
     if (this.enemy) {
-      _a.copy(this.enemy.pos).addScaledVector(this.enemy.vel, 0.12);
-      this._aimAt(_a, 0.25 * (1.2 - this.skill));
-      this.fireWant = true;
+      this._fight(dt);
       if (Math.random() < dt * 0.6) { a.ctrl.jump = true; a.ctrl.jumpHeld = true; }
       if (a.special >= 1 && Math.random() < dt * 0.8) m.throwBomb(a);
     } else {
       // 足元の少し先 or ターゲットへ撃って塗る
       if (this.target) _a.copy(this.target.pos);
       else _a.copy(a.pos).addScaledVector(this.basis.forward, 4).addScaledVector(a.up, -0.6);
-      this._aimAt(_a, 0.18);
+      this._aimAt(_a, 0.18, dt, 10);
       this.fireWant = Math.random() < 0.85;
     }
+  }
+
+  /** 敵との撃ち合い: 反応の遅れ・照準のずれ・ゆっくりした振り向き・連射の切れ目 */
+  _fight(dt) {
+    const a = this.a, e = this.enemy;
+    const dist = e.pos.distanceTo(a.pos);
+    this.errT -= dt;
+    if (this.errT <= 0) {
+      this.errT = 0.25 + Math.random() * 0.3;
+      const ang = (0.05 + (1 - this.skill) * 0.2) * (0.6 + dist / 12);
+      this.aimErr.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(Math.random() * ang * dist);
+    }
+    _a.copy(e.pos).add(this.aimErr);
+    this._aimAt(_a, 0, dt, 3 + this.skill * 5);
+    this.react -= dt;
+    if (this.react > 0) return;
+    // 照準がだいたい向いているときだけ撃つ
+    _b.subVectors(e.pos, a.pos).normalize();
+    if (a.aim.dot(_b) < 0.94) return;
+    if (this.burst > 0) { this.burst -= dt; this.fireWant = true; if (this.burst <= 0) this.rest = 0.3 + Math.random() * 0.5; }
+    else if ((this.rest -= dt) <= 0) this.burst = 0.45 + Math.random() * 0.6;
   }
 
   _pickTarget() {

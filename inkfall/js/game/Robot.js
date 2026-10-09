@@ -10,6 +10,9 @@ const shared = {};
 function geo(key, make) { return shared[key] || (shared[key] = make()); }
 
 export class Robot extends THREE.Group {
+  /** 試合中は設定「エフェクト」で後光の強さを変える(null = 演出シーン用の標準) */
+  static auraLevel = null;
+
   constructor(color = '#ff3fa4', { name = '', showName = false } = {}) {
     super();
     this.color = new THREE.Color(color);
@@ -168,7 +171,9 @@ export class Robot extends THREE.Group {
     this.head.rotation.x = -this.aimPitch * 0.45;
     this.recoil = Math.max(0, this.recoil - dt * 9);
     this.blaster.position.z = 0.26 - this.recoil * 0.08;
-    this.aura.material.opacity = 0.25 + Math.sin(this.t * 3) * 0.06;
+    const aura = Robot.auraLevel ?? 0.25;
+    this.aura.visible = aura > 0.01;
+    this.aura.material.opacity = aura * (1 + Math.sin(this.t * 3) * 0.24);
     this.tankInk.scale.y = 0.85 + Math.sin(this.t * 2.2) * 0.05;
   }
 

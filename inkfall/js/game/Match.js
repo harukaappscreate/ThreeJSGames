@@ -690,7 +690,7 @@ export class Match {
     // CPU
     const canMove = this.phase === 'play' || this.mode === 'training';
     for (const a of this.actors) {
-      if (!a.isLocal) { a.interpolate(now); a.model.visible = a.alive && !a.out && a.buf.length > 0; continue; }
+      if (!a.isLocal) { a.shield -= dt; a.interpolate(now); a.model.visible = a.alive && !a.out && a.buf.length > 0; continue; }
       a.fireCD -= dt;
       a.shoveCD = (a.shoveCD || 0) - dt;
       if (!a.alive) {

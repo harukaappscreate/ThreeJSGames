@@ -14,6 +14,7 @@ function ringMaterial() {
       uW: { value: 0.1 },
       uA: { value: 1 },
       uFill: { value: 0 },
+      uBoost: { value: 1 },
     },
     transparent: true,
     depthWrite: false,
@@ -24,7 +25,7 @@ function ringMaterial() {
       void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
-      uniform float uR, uW, uA, uFill;
+      uniform float uR, uW, uA, uFill, uBoost;
       varying vec2 vUv;
       void main() {
         float r = length(vUv - 0.5) * 2.0;
@@ -32,7 +33,7 @@ function ringMaterial() {
         float fill = uFill * smoothstep(uR, 0.0, r) * 0.35;
         float a = (ring + fill) * uA;
         if (a < 0.005) discard;
-        gl_FragColor = vec4(uColor * 1.8, a);
+        gl_FragColor = vec4(uColor * 1.8 * uBoost, a);
       }`,
   });
 }
@@ -82,6 +83,8 @@ export class Rings {
       if (p >= 1) { r.active = false; r.mesh.visible = false; }
     }
   }
+
+  setBoost(v) { for (const r of this.pool) r.mesh.material.uniforms.uBoost.value = v; }
 
   clear() { for (const r of this.pool) { r.active = false; r.mesh.visible = false; } }
 }

@@ -171,5 +171,10 @@
   "playAgain": "Play again",
   "thanksTitle": "Special Thanks",
   "thanksPlayer": "You, for playing!",
-  "holdToSpeed": "Hold to fast-forward"
+  "holdToSpeed": "Hold to fast-forward",
+  "set.effects": "Effects",
+  "set.effectsDesc": "Brightness of shots and splashes. Use \"Subtle\" if it is too bright",
+  "fx.soft": "Subtle",
+  "fx.normal": "Normal",
+  "fx.vivid": "Vivid"
 }

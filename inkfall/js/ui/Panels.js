@@ -79,6 +79,7 @@ export function openSettings(ui, { onClose, onLangChange } = {}) {
       row('set.lang', seg('language', [{ label: t('auto'), value: 'auto' }, { label: 'English', value: 'en' }, { label: '日本語', value: 'ja' }], () => { onLangChange?.(); render(); })),
       row('set.colors', seg('colorMode', [{ label: t('colors.standard'), value: 'standard' }, { label: t('colors.accessible'), value: 'accessible' }]), 'set.colorsDesc'),
       row('set.subtitles', onOff('subtitles')),
+      row('set.effects', seg('effects', [{ label: t('fx.soft'), value: 'soft' }, { label: t('fx.normal'), value: 'normal' }, { label: t('fx.vivid'), value: 'vivid' }]), 'set.effectsDesc'),
       row('set.reduceMotion', onOff('reduceMotion'), 'set.reduceMotionDesc'),
       row('set.quality', seg('quality', [{ label: t('auto'), value: 'auto' }, { label: t('q.low'), value: 'low' }, { label: t('q.medium'), value: 'medium' }, { label: t('q.high'), value: 'high' }])),
     );

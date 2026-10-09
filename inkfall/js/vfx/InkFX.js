@@ -33,6 +33,18 @@ export class InkFX {
     this.bombMeshes = [];
 
     this.glowTex = glowTexture();
+    this.shotMul = 1.25;
+    this.W = undefined;      // しぶきの芯の色(undefined = インクと同じ色)
+  }
+
+  /** 設定「エフェクト」の段階を反映 */
+  setLevel(lv) {
+    this.particles.uniforms.uBoost.value = lv.particle;
+    this.rings.setBoost(lv.ring);
+    this.shotMul = lv.shot;
+    this.W = lv.white ? '#ffffff' : undefined;
+    this.bombMat.emissiveIntensity = lv.white ? 2 : 1.1;
+    this.bombMeshes.forEach((m) => { m.material.emissiveIntensity = this.bombMat.emissiveIntensity; });
   }
 
   setViewport(h, fov) { this.particles.setViewport(h, fov); }
@@ -45,8 +57,8 @@ export class InkFX {
       _s.setScalar(1);
       _m.compose(s.pos, _q, _s);
       this.shotMesh.setMatrixAt(i, _m);
-      this.shotMesh.setColorAt(i, this._col.set(s.color).multiplyScalar(2.2));
-      if (Math.random() < 0.7) this.particles.emit({ pos: s.pos, color: s.color, size: 0.22, sizeEnd: 0.05, life: 0.22 });
+      this.shotMesh.setColorAt(i, this._col.set(s.color).multiplyScalar(this.shotMul));
+      if (Math.random() < 0.6) this.particles.emit({ pos: s.pos, color: s.color, size: 0.16, sizeEnd: 0.04, life: 0.18 });
     }
     this.shotMesh.count = n;
     this.shotMesh.instanceMatrix.needsUpdate = true;
@@ -66,18 +78,18 @@ export class InkFX {
       m.rotation.y += dt * 6;
       m.material.color.set(b.owner.color);
       m.material.emissive.set(b.owner.color);
-      this.particles.emit({ pos: b.pos, color: b.owner.color, color2: '#ffffff', size: 0.5, life: 0.4, speed: 0.6, shape: 1 });
+      this.particles.emit({ pos: b.pos, color: b.owner.color, color2: this.W, size: 0.5, life: 0.4, speed: 0.6, shape: 1 });
     });
   }
 
   splat(pos, normal, color, scale = 1) {
     _v.copy(normal).multiplyScalar(4 * scale);
-    this.particles.emit({ pos, vel: _v, speed: 3.5 * scale, count: Math.round(9 * scale), color, color2: '#ffffff', size: 0.28 * scale, sizeEnd: 0.05, life: 0.45, drag: 3, gravity: normal.clone().multiplyScalar(-14) });
+    this.particles.emit({ pos, vel: _v, speed: 3.5 * scale, count: Math.round(9 * scale), color, color2: this.W, size: 0.28 * scale, sizeEnd: 0.05, life: 0.45, drag: 3, gravity: normal.clone().multiplyScalar(-14) });
     this.rings.spawn({ pos, normal, color, size: 1.1 * scale, life: 0.3, width: 0.2, fill: 0.5 });
   }
 
   muzzle(pos, color) {
-    this.particles.emit({ pos, count: 3, color, color2: '#ffffff', speed: 1.5, size: 0.25, life: 0.12 });
+    this.particles.emit({ pos, count: 3, color, color2: this.W, speed: 1.5, size: 0.25, life: 0.12 });
   }
 
   inkout(pos, color) {
@@ -92,7 +104,7 @@ export class InkFX {
     this.rings.spawn({ pos, normal, color, size: 6.5, life: 0.55, width: 0.09 });
     this.rings.spawn({ pos, normal, color: '#ffffff', size: 4, life: 0.35, width: 0.12, fill: 0.4 });
     _v.copy(normal).multiplyScalar(6);
-    this.particles.emit({ pos, vel: _v, speed: 10, count: 50, color, color2: '#ffffff', size: 0.5, sizeEnd: 0.1, life: 0.8, drag: 2.2, gravity: normal.clone().multiplyScalar(-16) });
+    this.particles.emit({ pos, vel: _v, speed: 10, count: 50, color, color2: this.W, size: 0.5, sizeEnd: 0.1, life: 0.8, drag: 2.2, gravity: normal.clone().multiplyScalar(-16) });
   }
 
   bombBoom(pos, color) {
@@ -104,12 +116,12 @@ export class InkFX {
   }
 
   flipTrail(pos, color) {
-    this.particles.emit({ pos, count: 14, color, color2: '#ffffff', speed: 2.5, size: 0.3, life: 0.5, drag: 3, shape: 1 });
+    this.particles.emit({ pos, count: 14, color, color2: this.W, speed: 2.5, size: 0.3, life: 0.5, drag: 3, shape: 1 });
   }
 
   respawn(pos, up, color) {
     _v.copy(up).multiplyScalar(5);
-    this.particles.emit({ pos, vel: _v, speed: 1.5, count: 30, color, color2: '#ffffff', size: 0.3, life: 0.8, spread: 0.8, shape: 1 });
+    this.particles.emit({ pos, vel: _v, speed: 1.5, count: 30, color, color2: this.W, size: 0.3, life: 0.8, spread: 0.8, shape: 1 });
     this.rings.spawn({ pos: pos.clone().addScaledVector(up, -0.48), normal: up, color, size: 2.2, life: 0.6 });
   }
 

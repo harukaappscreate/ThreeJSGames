@@ -32,7 +32,7 @@ export class Particles {
     this.drag = new Float32Array(max);
     this.spin = new Float32Array(max);
 
-    this.uniforms = { uScale: { value: 600 } };
+    this.uniforms = { uScale: { value: 600 }, uBoost: { value: 1 } };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
       transparent: true,
@@ -56,6 +56,7 @@ export class Particles {
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
+        uniform float uBoost;
         varying vec3 vColor;
         varying float vAlpha;
         varying float vShape;
@@ -74,7 +75,7 @@ export class Particles {
             a = smoothstep(0.06, 0.0, abs(r - 0.4));
           }
           if (a < 0.01) discard;
-          gl_FragColor = vec4(vColor * 1.6, a * vAlpha);
+          gl_FragColor = vec4(vColor * 1.6 * uBoost, a * vAlpha * min(1.0, uBoost + 0.25));
         }`,
     });
     this.points = new THREE.Points(geo, mat);

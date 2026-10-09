@@ -301,6 +301,9 @@ export class Arena {
     this.group.add(this.mesh);
   }
 
+  /** 塗りたての光の強さ(設定「エフェクト」) */
+  setFreshGlow(v) { this.material.userData.uniforms.uFresh.value = v; }
+
   setTeamColors(a, b) {
     const u = this.material.userData.uniforms;
     u.uTeamA.value.set(a);
@@ -414,6 +417,7 @@ function createPaintMaterial(paintTex, colors) {
     uGrid: { value: new THREE.Color(colors.grid || '#5f6cff') },
     uEdge: { value: new THREE.Color(colors.edge || '#9fe8ff') },
     uTime: { value: 0 },
+    uFresh: { value: 1.4 },
   };
   mat.userData.uniforms = uniforms;
   mat.onBeforeCompile = (shader) => {
@@ -427,7 +431,7 @@ function createPaintMaterial(paintTex, colors) {
         vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
-        uniform sampler2D uPaint; uniform vec3 uTeamA; uniform vec3 uTeamB; uniform vec3 uGrid; uniform vec3 uEdge; uniform float uTime;
+        uniform sampler2D uPaint; uniform vec3 uTeamA; uniform vec3 uTeamB; uniform vec3 uGrid; uniform vec3 uEdge; uniform float uTime; uniform float uFresh;
         varying vec2 vPaint; varying vec2 vCell; varying vec2 vSize; varying vec3 vWPos;
         float h3(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
         float vnoise(vec3 x) {
@@ -452,7 +456,7 @@ function createPaintMaterial(paintTex, colors) {
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
         roughnessFactor = mix(roughnessFactor, 0.16, inkAmt);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        totalEmissiveRadiance += inkCol * inkAmt * (0.16 + pt.b * 1.4);
+        totalEmissiveRadiance += inkCol * inkAmt * (0.16 + pt.b * uFresh);
         totalEmissiveRadiance += uGrid * grid * (1.0 - inkAmt) * 0.32;
         totalEmissiveRadiance += uEdge * edge * (0.9 + 0.25 * sin(uTime * 2.0 + vWPos.y * 0.4));`);
   };

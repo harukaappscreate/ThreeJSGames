@@ -92,6 +92,14 @@ export const CONFIG = {
   // ばくだん鬼(個人戦)のプレイヤー色
   ffaColors: ['#ff3fa4', '#25d9ff', '#b6ff3d', '#ffb31f', '#a86bff', '#ff5a3d', '#3dffc4', '#ffffff'],
 
+  // エフェクトの明るさ(設定 → 表示 → エフェクト)
+  //  bloom: 試合中のブルーム / particle: しぶき等の明るさ / shot: 弾の明るさ / white: しぶきの芯を白く光らせるか
+  //  fresh: 塗りたての光 / aura: キャラの後光 / flash: 被弾フラッシュ
+  effects: {
+    soft:   { bloom: { strength: 0.22, radius: 0.35, threshold: 0.9 }, particle: 0.45, ring: 0.45, shot: 1.0, white: false, fresh: 0.35, aura: 0.0,  flash: 0.4 },
+    normal: { bloom: { strength: 0.42, radius: 0.4, threshold: 0.84 }, particle: 0.7,  ring: 0.65, shot: 1.25, white: false, fresh: 0.7, aura: 0.12, flash: 0.7 },
+    vivid:  { bloom: { strength: 0.85, radius: 0.5, threshold: 0.7 },  particle: 1.0,  ring: 1.0,  shot: 2.2, white: true,  fresh: 1.4,  aura: 0.3,  flash: 1.0 },
+  },
   quality: {
     low:    { pixelRatio: 1.0, bloom: false, shadows: false, particles: 700,  antialias: false },
     medium: { pixelRatio: 1.5, bloom: true,  shadows: false, particles: 1800, antialias: true },

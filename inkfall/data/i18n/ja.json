@@ -171,5 +171,10 @@
   "playAgain": "もう一度",
   "thanksTitle": "スペシャルサンクス",
   "thanksPlayer": "遊んでくれたあなた",
-  "holdToSpeed": "長押しで早送り"
+  "holdToSpeed": "長押しで早送り",
+  "set.effects": "エフェクト",
+  "set.effectsDesc": "弾やしぶきの光の強さ。まぶしいときは「ひかえめ」に",
+  "fx.soft": "ひかえめ",
+  "fx.normal": "ふつう",
+  "fx.vivid": "はなやか"
 }

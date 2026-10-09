@@ -7,6 +7,7 @@ import { CONFIG } from '../config.js';
 import { Match, offlineNet } from '../game/Match.js';
 import { CameraRig } from '../game/CameraRig.js';
 import { LandingMarker } from '../vfx/Rings.js';
+import { Robot } from '../game/Robot.js';
 import { settings } from '../core/Settings.js';
 import { t } from '../core/I18n.js';
 import { clamp } from '../core/Tween.js';
@@ -28,7 +29,6 @@ export class MatchScene extends BaseScene {
     this.camera.fov = CONFIG.camera.fov;
     this.camera.near = 0.05;
     this.camera.updateProjectionMatrix();
-    this.engine.postfx.setBloomParams({ strength: 0.85, radius: 0.5, threshold: 0.7 });
 
     // ライト
     const teams = settings.teams();
@@ -67,6 +67,10 @@ export class MatchScene extends BaseScene {
     } else netAdapter = offlineNet();
 
     this.match = new Match({ cfg, net: netAdapter, fx: this._fx(), scene: this.scene });
+    // エフェクトの明るさ(設定でいつでも変更できる)
+    this.applyEffects();
+    this._onSetting = (e) => { if (e.detail.key === 'effects') this.applyEffects(); };
+    settings.addEventListener('change', this._onSetting);
     this.me = this.match.me;
     if (this.me) this.me.onJump = () => { this.audio.sfx('jump'); this.me.model.squash(-0.3); };
     this.rig = new CameraRig(this.camera);
@@ -101,6 +105,16 @@ export class MatchScene extends BaseScene {
     if (this.mode === 'training') this.setupTraining();
   }
 
+  applyEffects() {
+    const lv = settings.fx();
+    this.engine.postfx.setBloomParams(lv.bloom);
+    this.fx.setLevel(lv);
+    this.match.arena.setFreshGlow(lv.fresh);
+    Robot.auraLevel = lv.aura;
+  }
+
+  flash(color, amount, decay) { this.engine.postfx.doFlash(color, amount * settings.fx().flash, decay); }
+
   // =========================================================
   // 演出コールバック(Match から呼ばれる)
   // =========================================================
@@ -115,7 +129,7 @@ export class MatchScene extends BaseScene {
       hitConfirm: (owner) => { if (owner === this.me) this.hitMarker(); },
       hit: (v, a) => {
         if (a === this.me) { this.hitMarker(); this.audio.sfx('hit_confirm'); }
-        if (v === this.me) { this.audio.sfx('hit'); this.engine.postfx.doFlash(v.color, 0.18, 2.5); this.rig.shake(0.12); }
+        if (v === this.me) { this.audio.sfx('hit'); this.flash(v.color, 0.18, 2.5); this.rig.shake(0.12); }
       },
       myHp: (hp) => this.setHp(hp),
       inkout: (v, by) => {
@@ -124,7 +138,7 @@ export class MatchScene extends BaseScene {
         this.feed(`<b style="color:${by?.color || '#fff'}">${esc(by?.name || '???')}</b> ${Icons.fire} <b style="color:${v.color}">${esc(v.name)}</b>`, true);
         if (v === this.me) {
           this.big(t('inked', { n: by?.name || '' }), 'bad');
-          this.engine.postfx.doFlash(by?.color || '#ffffff', 0.45, 1.5);
+          this.flash(by?.color || '#ffffff', 0.45, 1.5);
           this.respawnAt = performance.now() / 1000 + CONFIG.combat.respawnTime;
         }
         if (by === this.me) { this.toast(t('youInked', { n: v.name })); if (Math.random() < 0.5) this.subs.say('vo_splat'); }
@@ -180,7 +194,7 @@ export class MatchScene extends BaseScene {
         this.audio.playBGM('overdrive');
         this.subs.say('ann_overdrive');
         this.hudRoot.classList.add('od');
-        this.engine.postfx.doFlash('#ffffff', 0.25, 1.5);
+        this.flash('#ffffff', 0.25, 1.5);
       },
       phase: (m, prev) => this.onPhase(m, prev),
       end: (results) => this.onEnd(results),
@@ -193,7 +207,7 @@ export class MatchScene extends BaseScene {
       pass: (f, to) => {
         this.audio.sfx('tag_pass', { volume: to ? near(to.pos) : 1 });
         if (to) this.fx.splat(to.pos, to.up, '#ffb31f', 1.4);
-        if (to === this.me) { this.big(t('tag.got'), 'bad'); this.engine.postfx.doFlash('#ffb31f', 0.3, 2); }
+        if (to === this.me) { this.big(t('tag.got'), 'bad'); this.flash('#ffb31f', 0.3, 2); }
         if (f === this.me) this.toast(t('tag.passed', { n: to?.name || '' }));
       },
       boom: (a) => {
@@ -266,7 +280,7 @@ export class MatchScene extends BaseScene {
       this.countEl.className = 'count go';
       this.later(0.9, () => { this.countEl.className = 'count'; this.countEl.textContent = ''; });
       this.audio.sfx('go');
-      this.engine.postfx.doFlash('#ffffff', 0.25, 2);
+      this.flash('#ffffff', 0.25, 2);
       if (this.mode !== 'training') this.subs.say('ann_go');
     } else if (m.phase === 'roundEnd') {
       this.audio.sfx('round_end');
@@ -616,6 +630,8 @@ export class MatchScene extends BaseScene {
 
   dispose() {
     this._subs?.forEach((f) => f());
+    settings.removeEventListener('change', this._onSetting);
+    Robot.auraLevel = null;
     clearTimeout(this._bigT);
     this.input.wantLock = false;
     this.input.exitLock();
