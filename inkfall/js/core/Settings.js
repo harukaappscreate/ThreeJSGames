@@ -14,6 +14,7 @@ const DEFAULTS = {
   quality: 'auto',
   reduceMotion: false,
   effects: 'normal',     // soft / normal / vivid
+  soloMoon: false,       // ソロの CPU 戦でルール「ムーンジャンプ」
   subtitles: true,
   colorMode: 'standard', // standard / accessible
   sensitivity: 1.0,

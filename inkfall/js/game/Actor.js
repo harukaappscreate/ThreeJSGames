@@ -54,6 +54,9 @@ export class Actor {
     this.fallSpeed = 0;
     this.speed01 = 0;
     this.firing = false;
+    this.moon = false;           // ルール「ムーンジャンプ」
+    this.fuel = P.moon.fuel;
+    this.hovering = false;
     this.fireCD = 0;
     this.special = 0;
     this.holding = false;        // ばくだんを持っている
@@ -76,6 +79,8 @@ export class Actor {
     this.shield = CONFIG.combat.spawnShield;
     this.flipCD = 0;
     this.grounded = false;
+    this.fuel = P.moon.fuel;
+    this.hovering = false;
     this.buf.length = 0;
     this.model.visible = true;
     this.model.position.copy(pos);
@@ -117,7 +122,7 @@ export class Actor {
     let vUp = this.vel.dot(up);
     _vt.copy(this.vel).addScaledVector(up, -vUp);
     const target = _t.copy(_w).multiplyScalar(P.moveSpeed * speedMul);
-    const accel = this.grounded ? (mag > 0.05 ? P.accelGround : P.friction) : P.accelAir;
+    const accel = this.grounded ? (mag > 0.05 ? P.accelGround : P.friction) : P.accelAir * (this.hovering ? P.moon.airAccel : 1);
     const diff = target.sub(_vt);
     const dl = diff.length(), step = accel * dt;
     if (dl > step) diff.multiplyScalar(step / dl);
@@ -131,6 +136,23 @@ export class Actor {
     }
     if (this.jumping && !c.jumpHeld && vUp > 0) { vUp *= 0.55; this.jumping = false; }
     if (vUp <= 0) this.jumping = false;
+    // ムーンジャンプ: 空中でジャンプを押している間、ゲージを使ってふわっと浮く
+    if (this.moon) {
+      const M = P.moon;
+      const want = !this.grounded && c.jumpHeld && vUp <= M.lift + 0.5;
+      if (want && (this.hovering ? this.fuel > 0 : this.fuel > M.minStart)) {
+        if (!this.hovering) this.onHover?.(true);
+        this.hovering = true;
+        this.airHover = true;
+        this.fuel = Math.max(0, this.fuel - dt);
+        vUp += (M.lift - vUp) * Math.min(1, dt * M.response) + P.gravity * dt * 0.9;
+        if (vUp > M.lift + 0.5 && !this.jumping) vUp = M.lift + 0.5;
+      } else {
+        if (this.hovering) this.onHover?.(false);
+        this.hovering = false;
+        if (this.grounded) this.fuel = Math.min(M.fuel, this.fuel + M.recharge * dt);
+      }
+    }
     this.vel.copy(_vt).addScaledVector(up, vUp);
     const impact = Math.max(0, -vUp);
     this.fallSpeed = impact;
@@ -148,7 +170,8 @@ export class Actor {
     let landed = null;
     if (grounded) {
       this.coyote = P.coyoteTime;
-      if (!was) landed = { landed: impact };
+      if (!was) landed = { landed: impact, hovered: !!this.airHover };
+      this.airHover = false;
     }
     _vt.copy(this.vel).addScaledVector(up, -this.vel.dot(up));
     this.speed01 = Math.min(1, _vt.length() / P.moveSpeed);
@@ -193,6 +216,7 @@ export class Actor {
     this.aim.set(s.ax, s.ay, s.az).normalize();
     this.grounded = !!(s.flags & 1);
     this.firing = !!(s.flags & 2);
+    this.hovering = !!(s.flags & 32);
     this.speed01 = Math.min(1, Math.hypot(s.vx, s.vy, s.vz) / P.moveSpeed) * (this.grounded ? 1 : 0.3);
   }
 

@@ -171,6 +171,12 @@
       "duration": 1.5,
       "prompt": "Ink stamp ground slam, massive bass drop impact with a big paint splash and shockwave"
     },
+    "hover": {
+      "file": "sfx/hover.mp3",
+      "volume": 0.6,
+      "duration": 1.0,
+      "prompt": "Soft low-gravity float, airy rising synth whoosh with a gentle hum, sci-fi hover boots"
+    },
     "special_ready": {
       "file": "sfx/special_ready.mp3",
       "volume": 0.8,

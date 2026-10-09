@@ -49,6 +49,8 @@ export class Match {
       if (a.isBot && this.isHost) a.brain = new Bot(a, this, { kind: s.ai || (this.mode === 'tag' ? 'tag' : 'turf'), skill: s.skill ?? 0.7 });
       return a;
     });
+    this.moon = !!cfg.moon && (this.mode === 'turf' || this.mode === 'tag');
+    for (const a of this.actors) a.moon = this.moon;
     this.me = this.actors.find((a) => !a.isBot && a.userId === net.selfId) || null;
     this.byUser = new Map(this.actors.filter((a) => a.userId).map((a) => [a.userId, a]));
 
@@ -136,7 +138,7 @@ export class Match {
   _stateOf(a) {
     return {
       idx: a.idx,
-      flags: (a.grounded ? 1 : 0) | (a.firing ? 2 : 0) | (a.alive ? 4 : 0) | (a.holding ? 8 : 0) | (a.out ? 16 : 0),
+      flags: (a.grounded ? 1 : 0) | (a.firing ? 2 : 0) | (a.alive ? 4 : 0) | (a.holding ? 8 : 0) | (a.out ? 16 : 0) | (a.hovering ? 32 : 0),
       g: gravityIndex(a.gravity),
       px: a.pos.x, py: a.pos.y, pz: a.pos.z,
       vx: a.vel.x, vy: a.vel.y, vz: a.vel.z,
@@ -338,9 +340,11 @@ export class Match {
   botFlip(actor, g) { return this.flip(actor, g); }
 
   /** 着地したとき(ローカルの選手) */
-  landed(actor, impact) {
+  landed(actor, impact, hovered = false) {
     this.fx.land?.(actor, impact);
-    if (impact < PH.stampSpeed || this.phase !== 'play' || this.mode === 'tag') return;
+    // ムーンジャンプで浮いたあとの着地は、スタンプに必要な速さを上げる(毎回スタンプにならないように)
+    const need = PH.stampSpeed * (hovered ? PH.moon.stampMul : 1);
+    if (impact < need || this.phase !== 'play' || this.mode === 'tag') return;
     const n = actor.up.clone();
     const p = actor.pos.clone().addScaledVector(n, -PH.radius);
     const m = { k: 'stamp', i: actor.idx, p: vec(p), n: [n.x, n.y, n.z] };
@@ -717,7 +721,7 @@ export class Match {
         if (!basis) continue;
         const mul = this._speedMul(a);
         const land = a.simulate(dt, basis, this.arena, mul);
-        if (land) this.landed(a, land.landed);
+        if (land) this.landed(a, land.landed, land.hovered);
       }
     }
 

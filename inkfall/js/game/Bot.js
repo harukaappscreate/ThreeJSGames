@@ -33,14 +33,23 @@ export class Bot {
     this.errT = 0;
     this.burst = 0;                    // 連射している残り時間
     this.rest = 0;                     // 連射の合間
+    this.hoverT = 0;                   // ムーンジャンプでジャンプを押し続ける残り時間
   }
 
   update(dt) {
     const a = this.a;
     a.ctrl.moveX = 0; a.ctrl.moveY = 0; a.ctrl.jump = false; a.ctrl.jumpHeld = false;
     this.fireWant = false;
-    if (!a.alive || a.out) return;
+    if (!a.alive || a.out) { this.hoverT = 0; return; }
     this.think -= dt;
+    // ムーンジャンプ: ときどき跳んで、しばらく浮く
+    if (a.moon) {
+      if (this.hoverT > 0) { this.hoverT -= dt; a.ctrl.jumpHeld = true; }
+      else if (a.grounded && Math.random() < dt * (this.enemy || this.kind === 'tag' ? 0.5 : 0.18)) {
+        a.ctrl.jump = true; a.ctrl.jumpHeld = true;
+        this.hoverT = 0.5 + Math.random() * 1.3;
+      }
+    }
     if (this.kind === 'dummy') return this._dummy(dt);
     if (this.kind === 'tag') return this._tag(dt);
     return this._turf(dt);

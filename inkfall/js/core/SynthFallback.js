@@ -61,6 +61,7 @@ export class SynthFallback {
       case 'inkout': N({ dur: 0.5, vol: 0.35, type: 'lowpass', f0: 3000, f1: 150 }); T({ type: 'sawtooth', f0: 400, f1: 60, dur: 0.5, vol: 0.12 }); break;
       case 'respawn': T({ type: 'sine', f0: 300, f1: 1200, dur: 0.4, vol: 0.15 }); N({ dur: 0.4, vol: 0.08, type: 'highpass', f0: 3000, f1: 8000 }); break;
       case 'jump': T({ type: 'sine', f0: 280, f1: 620, dur: 0.14, vol: 0.14 }); break;
+      case 'hover': T({ type: 'sine', f0: 320, f1: 520, dur: 0.5, vol: 0.08 }); break;
       case 'land': N({ dur: 0.1, vol: 0.18, f0: 900, f1: 200 }); T({ type: 'sine', f0: 140, f1: 60, dur: 0.12, vol: 0.2 }); break;
       case 'land_big': N({ dur: 0.3, vol: 0.3, f0: 1400, f1: 100 }); T({ type: 'sine', f0: 110, f1: 35, dur: 0.35, vol: 0.4 }); break;
       case 'flip':

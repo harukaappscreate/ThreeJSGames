@@ -176,5 +176,11 @@
   "set.effectsDesc": "Brightness of shots and splashes. Use \"Subtle\" if it is too bright",
   "fx.soft": "Subtle",
   "fx.normal": "Normal",
-  "fx.vivid": "Vivid"
+  "fx.vivid": "Vivid",
+  "moon.title": "Moon Jump",
+  "moon.short": "Hold jump to float",
+  "moon.desc": "Hold jump in the air to float while your gauge lasts. Landing refills it.",
+  "moon.soloDesc": "Applies to CPU Turf War and CPU Bomb Tag",
+  "keys.moon": "<b>Hold Space</b> float",
+  "howto.moon": "<b>Moon Jump rule</b>: hold jump in the air to float while the gauge around your crosshair lasts. Landing refills it. Floating players leave a glowing trail."
 }

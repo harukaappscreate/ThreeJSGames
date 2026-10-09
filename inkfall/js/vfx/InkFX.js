@@ -119,6 +119,13 @@ export class InkFX {
     this.particles.emit({ pos, count: 14, color, color2: this.W, speed: 2.5, size: 0.3, life: 0.5, drag: 3, shape: 1 });
   }
 
+  /** ムーンジャンプで浮いている人の足元 */
+  hoverTrail(pos, up, color, dt) {
+    if (Math.random() > dt * 40) return;
+    _v.copy(up).multiplyScalar(-2.2);
+    this.particles.emit({ pos: _s.copy(pos).addScaledVector(up, -0.45), vel: _v, speed: 0.8, count: 1, color, color2: this.W, size: 0.26, sizeEnd: 0.02, life: 0.45, drag: 1.5 });
+  }
+
   respawn(pos, up, color) {
     _v.copy(up).multiplyScalar(5);
     this.particles.emit({ pos, vel: _v, speed: 1.5, count: 30, color, color2: this.W, size: 0.3, life: 0.8, spread: 0.8, shape: 1 });

@@ -101,7 +101,7 @@ export class LobbyScene extends BaseScene {
       const list = el('div', { class: 'lp-list' });
       for (const l of n.list) {
         const b = el('button', { class: 'lp-room', type: 'button' },
-          el('span', { text: l.host }), el('small', { text: `${t(l.meta.mode === 'tag' ? 'mode.tagTitle' : 'mode.turf')} · ${l.count}/${l.max}` }));
+          el('span', { text: l.host }), el('small', { text: `${t(l.meta.mode === 'tag' ? 'mode.tagTitle' : 'mode.turf')}${l.meta.moon === true ? ` · ${t('moon.title')}` : ''} · ${l.count}/${l.max}` }));
         b.addEventListener('click', () => this.run(() => n.join(l.id)));
         list.append(b);
       }
@@ -129,7 +129,12 @@ export class LobbyScene extends BaseScene {
     const botBtn = el('button', { type: 'button', class: `chip-toggle${botsOn ? ' on' : ''}`, text: `${t('fillCpu')}: ${botsOn ? t('on') : t('off')}` });
     botBtn.disabled = !n.isHost;
     botBtn.addEventListener('click', () => { n.setMeta({ bots: !botsOn }); this.audio.sfx('ui_toggle'); });
-    p.append(el('div', { class: 'lp-section', text: t('mode') }), modeRow, botBtn);
+    const moonOn = n.metadata.moon === true;
+    const moonBtn = el('button', { type: 'button', class: `chip-toggle${moonOn ? ' on' : ''}`, text: `${t('moon.title')}: ${moonOn ? t('on') : t('off')}`, title: t('moon.desc') });
+    moonBtn.disabled = !n.isHost;
+    moonBtn.addEventListener('click', () => { n.setMeta({ moon: !moonOn }); this.audio.sfx('ui_toggle'); });
+    p.append(el('div', { class: 'lp-section', text: t('mode') }), modeRow, el('div', { class: 'lp-chips' }, botBtn, moonBtn));
+    if (moonOn) p.append(el('div', { class: 'lp-note', text: t('moon.desc') }));
 
     const teams = settings.teams();
     const memberRow = (r) => el('div', { class: `lp-member${r.ready ? ' ready' : ''}` },
@@ -176,7 +181,7 @@ export class LobbyScene extends BaseScene {
     if (!n.isHost) return;
     const botsOn = n.metadata.bots !== false;
     const slots = buildSlots(n.mode, n.roster, { bots: botsOn });
-    const cfg = { mode: n.mode, arena: 'cube', slots, rounds: CONFIG.turf.rounds, duration: CONFIG.turf.duration, seed: Math.floor(Math.random() * 1e9) };
+    const cfg = { mode: n.mode, arena: 'cube', slots, rounds: CONFIG.turf.rounds, duration: CONFIG.turf.duration, seed: Math.floor(Math.random() * 1e9), moon: n.metadata.moon === true };
     n.setMeta({ phase: 'playing' });
     n.broadcastAll({ k: 'start', cfg });
   }

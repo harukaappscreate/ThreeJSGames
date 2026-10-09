@@ -73,6 +73,7 @@ export class MatchScene extends BaseScene {
     settings.addEventListener('change', this._onSetting);
     this.me = this.match.me;
     if (this.me) this.me.onJump = () => { this.audio.sfx('jump'); this.me.model.squash(-0.3); };
+    if (this.me && this.match.moon) this.me.onHover = (on) => { if (on) this.audio.sfx('hover', { minGap: 0.25 }); };
     this.rig = new CameraRig(this.camera);
     this.match.meBasis = this.rig.basis();
     this.aimMarker = new LandingMarker();
@@ -238,6 +239,7 @@ export class MatchScene extends BaseScene {
       card.append(el('div', { class: 'vs-title', text: t(`mode.${this.mode === 'tag' ? 'tagTitle' : this.mode}`) }));
       if (this.mode === 'tag') card.append(el('div', { class: 'vs-list', text: c.slots.map((s) => s.name).join(' · ') }));
     }
+    if (this.match.moon) card.append(el('div', { class: 'vs-rule', html: `${Icons.moon || ''}<b>${t('moon.title')}</b><small>${t('moon.short')}</small>` }));
     this.hud.append(card);
     this.vsCard = card;
     this.subs.say({ turf: 'ann_turf', tag: 'ann_tag', training: 'navi_training', challenge: 'ann_challenge' }[this.mode]);
@@ -339,6 +341,7 @@ export class MatchScene extends BaseScene {
     // 照準
     this.cross = el('div', { class: 'crosshair' }, el('i', { class: 'c1' }), el('i', { class: 'c2' }), el('i', { class: 'c3' }), el('i', { class: 'c4' }), el('b', { class: 'cdot' }));
     this.flipHint = el('div', { class: 'flip-hint' });
+    if (this.match.moon) { this.hoverRing = el('div', { class: 'hover-ring' }); this.cross.append(this.hoverRing); }
     this.countEl = el('div', { class: 'count' });
     this.bigEl = el('div', { class: 'big-msg' });
     this.toastEl = el('div', { class: 'toast' });
@@ -353,7 +356,7 @@ export class MatchScene extends BaseScene {
       bottom.append(el('div', { class: 'hp-bar' }, this.hpFill), el('div', { class: 'sp-bar' }, this.spFill, this.spLabel));
     }
     if (!document.body.classList.contains('touch')) {
-      bottom.append(el('div', { class: 'keys', html: t(this.mode === 'tag' ? 'keys.tag' : 'keys.turf') }));
+      bottom.append(el('div', { class: 'keys', html: t(this.mode === 'tag' ? 'keys.tag' : 'keys.turf') + (this.match.moon ? ` · ${t('keys.moon')}` : '') }));
     }
     this.lockHint = el('div', { class: 'lock-hint', text: t('clickToAim') });
     this.hud.append(top, this.feedEl, this.cross, this.flipHint, this.countEl, this.bigEl, this.toastEl, this.respawnEl, bottom, this.lockHint);
@@ -395,6 +398,12 @@ export class MatchScene extends BaseScene {
   }
 
   updateHUD() {
+    if (this.hoverRing && this.me) {
+      const f = this.me.fuel / CONFIG.physics.moon.fuel;
+      this.hoverRing.style.setProperty('--p', `${Math.round(f * 100)}%`);
+      this.hoverRing.classList.toggle('show', this.me.hovering || f < 0.999);
+      this.hoverRing.classList.toggle('low', f < 0.25);
+    }
     const m = this.match;
     if (this.mode === 'turf') {
       const tot = m.score.tot || 1;
@@ -623,6 +632,7 @@ export class MatchScene extends BaseScene {
     // カメラが近すぎるときは自分のモデルを消す
     if (me && me.alive) me.model.root.visible = this.rig.curDist > 1.25 && me.model.root.visible;
     this.fx.drawShots(m.shots, m.bombs, dt);
+    if (m.moon) for (const a of m.actors) if (a.hovering && a.alive && a.model.visible) this.fx.hoverTrail(a.pos, a.up, a.color, dt);
     this.fx.ambient(m.arena.center, dt);
     this.engine.postfx.speed = me && !me.grounded && me.fallSpeed > 14 ? clamp((me.fallSpeed - 14) / 14, 0, 0.8) : 0;
     this.updateHUD();

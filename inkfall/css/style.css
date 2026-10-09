@@ -404,3 +404,20 @@ body.modal-open #touch-root { display: none !important; }
 @keyframes subin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes subout { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .logo-main::after { animation: none; } .boot-start { animation: none; } }
+
+/* ---- ルール「ムーンジャンプ」 ---- */
+.hover-ring { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+  background: conic-gradient(var(--lime) var(--p, 100%), rgba(255, 255, 255, 0.12) 0);
+  -webkit-mask: radial-gradient(circle, transparent 22px, #000 23px, #000 25px, transparent 26px);
+          mask: radial-gradient(circle, transparent 22px, #000 23px, #000 25px, transparent 26px);
+  opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.hover-ring.show { opacity: 0.85; }
+.hover-ring.low { background: conic-gradient(#ff6b6b var(--p, 100%), rgba(255, 255, 255, 0.12) 0); }
+.vs-rule { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; color: var(--lime); font-size: 15px; }
+.vs-rule .ico { width: 18px; height: 18px; }
+.vs-rule small { color: var(--text); opacity: 0.8; font-size: 12px; }
+.lp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.solo-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.solo-rule .chip-toggle { margin-top: 0; }
+.solo-rule small { opacity: 0.75; }
+.howto-extra { font-size: 0.9em; opacity: 0.85; border-top: 1px solid var(--line); padding-top: 8px; }

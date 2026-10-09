@@ -9,7 +9,7 @@ import { CONFIG } from '../config.js';
 export function openHowto(ui, { onClose } = {}) {
   const touch = isTouch();
   const pages = [
-    { title: 'howto.p1.title', text: touch ? 'howto.p1.touch' : 'howto.p1.pc', art: 'move' },
+    { title: 'howto.p1.title', text: touch ? 'howto.p1.touch' : 'howto.p1.pc', art: 'move', extra: 'howto.moon' },
     { title: 'howto.p2.title', text: touch ? 'howto.p2.touch' : 'howto.p2.pc', art: 'paint' },
     { title: 'howto.p3.title', text: touch ? 'howto.p3.touch' : 'howto.p3.pc', art: 'flip' },
     { title: 'howto.p4.title', text: touch ? 'howto.p4.touch' : 'howto.p4.pc', art: 'stamp' },
@@ -24,7 +24,9 @@ export function openHowto(ui, { onClose } = {}) {
     page.append(el('div', { class: `howto-art art-${p.art}` }), el('h3', { text: t(p.title) }));
     const para = el('p');
     para.innerHTML = t(p.text);
-    page.append(para, el('div', { class: 'dots' }, pages.map((_, k) => el('span', { class: k === i ? 'on' : '' }))));
+    page.append(para);
+    if (p.extra) { const ex = el('p', { class: 'howto-extra' }); ex.innerHTML = t(p.extra); page.append(ex); }
+    page.append(el('div', { class: 'dots' }, pages.map((_, k) => el('span', { class: k === i ? 'on' : '' }))));
     m.body.append(page);
     m.foot.innerHTML = '';
     if (i > 0) m.foot.append(ui.button({ label: t('prev'), icon: 'back', cls: 'ghost small', sfx: 'ui_back', onClick: () => { i--; render(); } }));
@@ -141,6 +143,16 @@ export function openSolo(ui, { onPick, best = {}, onLeaderboard }) {
     card('challenge', 'trophy', 'mode.challenge', 'mode.challengeDesc', best.challenge ? `${t('best')}: ${best.challenge}` : ''),
   );
   m.body.append(grid);
+  // CPU 戦(陣取り / ばくだん鬼)だけに効くルール
+  const moonBtn = el('button', { type: 'button', class: 'chip-toggle' });
+  const syncMoon = () => {
+    const on = !!settings.get('soloMoon');
+    moonBtn.classList.toggle('on', on);
+    moonBtn.textContent = `${t('moon.title')}: ${on ? t('on') : t('off')}`;
+  };
+  syncMoon();
+  moonBtn.addEventListener('click', () => { settings.set('soloMoon', !settings.get('soloMoon')); ui.audio.sfx('ui_toggle'); syncMoon(); });
+  m.body.append(el('div', { class: 'solo-rule' }, moonBtn, el('small', { text: t('moon.soloDesc') })));
   m.foot.append(ui.button({ label: t('leaderboard'), icon: 'trophy', cls: 'ghost small', onClick: () => onLeaderboard?.() }));
   m.foot.append(ui.button({ label: t('close'), icon: 'back', cls: 'ghost small', sfx: 'ui_back', onClick: () => m.close() }));
   return m;
