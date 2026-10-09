@@ -102,6 +102,21 @@ export const CONFIG = {
   // ばくだん鬼(個人戦)のプレイヤー色
   ffaColors: ['#ff3fa4', '#25d9ff', '#b6ff3d', '#ffb31f', '#a86bff', '#ff5a3d', '#3dffc4', '#ffffff'],
 
+  // CPU の強さ(ソロ画面 / ロビーで選ぶ)
+  //  skill: ねらいの正確さ・振り向きの速さ / range: 敵に気づく距離 / focus: 同じ相手をねらう CPU の最大数
+  //  react: 撃ち始めるまでの遅れ(倍) / rest: 連射の合間(倍)
+  cpu: {
+    easy:   { skill: 0.4,  range: 11, focus: 1, react: 1.5, rest: 1.7 },
+    normal: { skill: 0.6,  range: 14, focus: 2, react: 1.1, rest: 1.2 },
+    hard:   { skill: 0.85, range: 17, focus: 3, react: 0.8, rest: 0.85 },
+  },
+  // リスポーン狩り対策(CPU だけが守るルール)
+  spawnCare: {
+    margin: 3.5,   // 相手の出撃エリアのまわり何 m までは、塗りに行く場所に選ばない
+    grace: 2.5,    // 無敵が切れてから何秒間は、出撃エリアの近くにいる相手をねらわない
+    near: 6,       // 「出撃エリアの近く」とみなす距離
+  },
+
   // エフェクトの明るさ(設定 → 表示 → エフェクト)
   //  bloom: 試合中のブルーム / particle: しぶき等の明るさ / shot: 弾の明るさ / white: しぶきの芯を白く光らせるか
   //  fresh: 塗りたての光 / aura: キャラの後光 / flash: 被弾フラッシュ

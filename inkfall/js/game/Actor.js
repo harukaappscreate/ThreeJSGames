@@ -77,6 +77,7 @@ export class Actor {
     this.hp = CONFIG.combat.hp;
     this.alive = true;
     this.shield = CONFIG.combat.spawnShield;
+    this.spawnedAt = performance.now() / 1000;
     this.flipCD = 0;
     this.grounded = false;
     this.fuel = P.moon.fuel;

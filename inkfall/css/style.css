@@ -421,3 +421,13 @@ body.modal-open #touch-root { display: none !important; }
 .solo-rule .chip-toggle { margin-top: 0; }
 .solo-rule small { opacity: 0.75; }
 .howto-extra { font-size: 0.9em; opacity: 0.85; border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* ---- セーフゾーン / CPU の強さ ---- */
+.safe-tag { position: absolute; left: 50%; bottom: 128px; transform: translateX(-50%); padding: 4px 12px; border-radius: 99px;
+  border: 1px solid var(--lime); color: var(--lime); background: rgba(8, 10, 22, 0.6); font-size: 13px; letter-spacing: 0.08em;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.safe-tag.show { opacity: 0.9; }
+.cpu-seg { flex: 1; min-width: 220px; }
+.lp-cpu { align-items: center; margin-top: 8px; }
+.lp-label { font-size: 13px; opacity: 0.8; }
+@media (max-height: 500px) { .safe-tag { bottom: 96px; } }

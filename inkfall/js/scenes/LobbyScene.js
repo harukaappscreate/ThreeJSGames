@@ -135,6 +135,16 @@ export class LobbyScene extends BaseScene {
     moonBtn.addEventListener('click', () => { n.setMeta({ moon: !moonOn }); this.audio.sfx('ui_toggle'); });
     p.append(el('div', { class: 'lp-section', text: t('mode') }), modeRow, el('div', { class: 'lp-chips' }, botBtn, moonBtn));
     if (moonOn) p.append(el('div', { class: 'lp-note', text: t('moon.desc') }));
+    // CPU の強さ(ホストが選ぶ)
+    const cpu = n.metadata.cpu || 'normal';
+    const cpuSeg = el('div', { class: 'seg cpu-seg' });
+    for (const k of ['easy', 'normal', 'hard']) {
+      const b = el('button', { type: 'button', class: cpu === k ? 'on' : '', text: t(`cpu.${k}`) });
+      b.disabled = !n.isHost;
+      b.addEventListener('click', () => { n.setMeta({ cpu: k }); this.audio.sfx('ui_toggle'); });
+      cpuSeg.append(b);
+    }
+    p.append(el('div', { class: 'lp-chips lp-cpu' }, el('span', { class: 'lp-label', text: t('cpu.level') }), cpuSeg));
 
     const teams = settings.teams();
     const memberRow = (r) => el('div', { class: `lp-member${r.ready ? ' ready' : ''}` },
@@ -181,7 +191,7 @@ export class LobbyScene extends BaseScene {
     if (!n.isHost) return;
     const botsOn = n.metadata.bots !== false;
     const slots = buildSlots(n.mode, n.roster, { bots: botsOn });
-    const cfg = { mode: n.mode, arena: 'cube', slots, rounds: CONFIG.turf.rounds, duration: CONFIG.turf.duration, seed: Math.floor(Math.random() * 1e9), moon: n.metadata.moon === true };
+    const cfg = { mode: n.mode, arena: 'cube', slots, rounds: CONFIG.turf.rounds, duration: CONFIG.turf.duration, seed: Math.floor(Math.random() * 1e9), moon: n.metadata.moon === true, cpu: n.metadata.cpu || 'normal' };
     n.setMeta({ phase: 'playing' });
     n.broadcastAll({ k: 'start', cfg });
   }

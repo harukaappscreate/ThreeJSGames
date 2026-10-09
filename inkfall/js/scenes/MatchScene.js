@@ -346,6 +346,7 @@ export class MatchScene extends BaseScene {
     this.bigEl = el('div', { class: 'big-msg' });
     this.toastEl = el('div', { class: 'toast' });
     this.respawnEl = el('div', { class: 'respawn-msg' });
+    this.safeEl = el('div', { class: 'safe-tag', text: t('safeZone') });
 
     // 下
     const bottom = el('div', { class: 'hud-bottom' });
@@ -359,7 +360,7 @@ export class MatchScene extends BaseScene {
       bottom.append(el('div', { class: 'keys', html: t(this.mode === 'tag' ? 'keys.tag' : 'keys.turf') + (this.match.moon ? ` · ${t('keys.moon')}` : '') }));
     }
     this.lockHint = el('div', { class: 'lock-hint', text: t('clickToAim') });
-    this.hud.append(top, this.feedEl, this.cross, this.flipHint, this.countEl, this.bigEl, this.toastEl, this.respawnEl, bottom, this.lockHint);
+    this.hud.append(top, this.feedEl, this.cross, this.flipHint, this.countEl, this.bigEl, this.toastEl, this.respawnEl, this.safeEl, bottom, this.lockHint);
     s.append(this.hud);
     this.setHp(CONFIG.combat.hp);
   }
@@ -398,6 +399,7 @@ export class MatchScene extends BaseScene {
   }
 
   updateHUD() {
+    if (this.safeEl) this.safeEl.classList.toggle('show', !!(this.me?.alive && this.match.inSafe(this.me) && this.match.phase === 'play'));
     if (this.hoverRing && this.me) {
       const f = this.me.fuel / CONFIG.physics.moon.fuel;
       this.hoverRing.style.setProperty('--p', `${Math.round(f * 100)}%`);

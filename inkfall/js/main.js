@@ -47,6 +47,7 @@ function makeSoloCfg(mode) {
   return {
     mode, arena: 'cube', slots,
     moon: (mode === 'turf' || mode === 'tag') && !!settings.get('soloMoon'),
+    cpu: settings.get('cpuLevel') || 'normal',
     rounds: mode === 'turf' ? CONFIG.turf.rounds : 1,
     duration: mode === 'challenge' ? CONFIG.challenge.duration : CONFIG.turf.duration,
   };

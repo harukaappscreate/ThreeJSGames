@@ -153,6 +153,16 @@ export function openSolo(ui, { onPick, best = {}, onLeaderboard }) {
   syncMoon();
   moonBtn.addEventListener('click', () => { settings.set('soloMoon', !settings.get('soloMoon')); ui.audio.sfx('ui_toggle'); syncMoon(); });
   m.body.append(el('div', { class: 'solo-rule' }, moonBtn, el('small', { text: t('moon.soloDesc') })));
+  // CPU の強さ(CPU 陣取り / CPU ばくだん鬼の相手)
+  const lv = el('div', { class: 'seg cpu-seg' });
+  const lvBtns = ['easy', 'normal', 'hard'].map((k) => {
+    const b = el('button', { type: 'button', text: t(`cpu.${k}`) });
+    b.classList.toggle('on', (settings.get('cpuLevel') || 'normal') === k);
+    b.addEventListener('click', () => { settings.set('cpuLevel', k); ui.audio.sfx('ui_toggle'); lvBtns.forEach((x, i) => x.classList.toggle('on', ['easy', 'normal', 'hard'][i] === k)); });
+    return b;
+  });
+  lv.append(...lvBtns);
+  m.body.append(el('div', { class: 'solo-rule' }, el('b', { text: t('cpu.level') }), lv));
   m.foot.append(ui.button({ label: t('leaderboard'), icon: 'trophy', cls: 'ghost small', onClick: () => onLeaderboard?.() }));
   m.foot.append(ui.button({ label: t('close'), icon: 'back', cls: 'ghost small', sfx: 'ui_back', onClick: () => m.close() }));
   return m;

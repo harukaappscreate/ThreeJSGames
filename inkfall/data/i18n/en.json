@@ -182,5 +182,10 @@
   "moon.desc": "Hold jump in the air to float while your gauge lasts. Landing refills it.",
   "moon.soloDesc": "Applies to CPU Turf War and CPU Bomb Tag",
   "keys.moon": "<b>Hold Space</b> float",
-  "howto.moon": "<b>Moon Jump rule</b>: hold jump in the air to float while the gauge around your crosshair lasts. Landing refills it. Floating players leave a glowing trail."
+  "howto.moon": "<b>Moon Jump rule</b>: hold jump in the air to float while the gauge around your crosshair lasts. Landing refills it. Floating players leave a glowing trail.",
+  "cpu.level": "CPU strength",
+  "cpu.easy": "Easy",
+  "cpu.normal": "Normal",
+  "cpu.hard": "Hard",
+  "safeZone": "SAFE ZONE"
 }

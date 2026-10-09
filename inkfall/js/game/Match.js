@@ -41,14 +41,20 @@ export class Match {
     this.teamColors = [null, teams[0].color, teams[1].color];
     this.arena.setTeamColors(teams[0].color, teams[1].color);
 
+    // CPU の強さ。ソロでは味方の CPU は「ふつう」のまま(難易度は相手チームにだけ効く)
+    const level = CONFIG.cpu[cfg.cpu] ? cfg.cpu : 'normal';
+    const humanTeams = new Set(cfg.slots.filter((s) => !s.bot && s.team).map((s) => s.team));
+    const botLevel = (s) => (!net.online && this.mode === 'turf' && humanTeams.has(s.team) ? 'normal' : level);
     this.actors = cfg.slots.map((s) => {
       const color = this.mode === 'tag' ? CONFIG.ffaColors[s.idx % CONFIG.ffaColors.length] : this.teamColors[s.team];
       const isMe = !s.bot && s.id === net.selfId;
       const a = new Actor({ idx: s.idx, team: s.team, color, name: s.name, isBot: !!s.bot, isLocal: isMe || (s.bot && this.isHost), userId: s.id });
       scene.add(a.model);
-      if (a.isBot && this.isHost) a.brain = new Bot(a, this, { kind: s.ai || (this.mode === 'tag' ? 'tag' : 'turf'), skill: s.skill ?? 0.7 });
+      if (a.isBot && this.isHost) a.brain = new Bot(a, this, { kind: s.ai || (this.mode === 'tag' ? 'tag' : 'turf'), level: botLevel(s) });
       return a;
     });
+    this.safeZones = (this.mode === 'turf' || this.mode === 'training') ? this.arena.def.spawnZones || null : null;
+    if (this.safeZones) this._buildSafeZones();
     this.moon = !!cfg.moon && (this.mode === 'turf' || this.mode === 'tag');
     for (const a of this.actors) a.moon = this.moon;
     this.me = this.actors.find((a) => !a.isBot && a.userId === net.selfId) || null;
@@ -125,7 +131,7 @@ export class Match {
         if (prevG !== s.g) this.fx.flip?.(a);
         const dead = this.deadUntil.get(a.idx) || 0;
         const alive = !!(s.flags & 4);
-        if (alive && !a.alive && now > dead) { a.alive = true; a.model.visible = true; a.shield = CB.spawnShield; this.fx.respawn?.(a); }
+        if (alive && !a.alive && now > dead) { a.alive = true; a.model.visible = true; a.shield = CB.spawnShield; a.spawnedAt = performance.now() / 1000; this.fx.respawn?.(a); }
         if (!this.isHost) { a.holding = !!(s.flags & 8); a.out = !!(s.flags & 16); a.hp = s.hp; }
       }
     } else if (bytes[0] === MSG.PAINT && !this.isHost) {
@@ -295,8 +301,63 @@ export class Match {
     }
   }
 
+  /** 点 p がチーム team の出撃エリア(セーフゾーン)の中か */
+  inZone(p, team) {
+    const z = this.safeZones?.[team === 1 ? 'A' : team === 2 ? 'B' : ''];
+    if (!z) return false;
+    return p.x >= z.min[0] && p.x <= z.max[0] && p.y >= z.min[1] && p.y <= z.max[1] && p.z >= z.min[2] && p.z <= z.max[2];
+  }
+
+  /** 出撃エリアから d m 以内か */
+  nearZone(p, team, d) {
+    const z = this.safeZones?.[team === 1 ? 'A' : team === 2 ? 'B' : ''];
+    if (!z) return false;
+    const dx = Math.max(z.min[0] - p.x, 0, p.x - z.max[0]);
+    const dy = Math.max(z.min[1] - p.y, 0, p.y - z.max[1]);
+    const dz = Math.max(z.min[2] - p.z, 0, p.z - z.max[2]);
+    return dx * dx + dy * dy + dz * dz <= d * d;
+  }
+
+  /** 復活したばかりで、まだ出撃エリアの近くにいる(CPU はねらわない) */
+  freshSpawn(a) {
+    if (!this.safeZones || !a.spawnedAt) return false;
+    const age = performance.now() / 1000 - a.spawnedAt;
+    return age < CB.spawnShield + CONFIG.spawnCare.grace && this.nearZone(a.pos, a.team, CONFIG.spawnCare.near);
+  }
+
+  /** 自チームの出撃エリアの床にいる(= ダメージを受けない) */
+  inSafe(a) { return !!this.safeZones && a.gravity.y < -0.9 && this.inZone(a.pos, a.team); }
+
+  _buildSafeZones() {
+    for (const [key, z] of Object.entries(this.safeZones)) {
+      const team = key === 'A' ? 1 : 2;
+      if (!this.actors.some((a) => a.team === team)) continue;
+      const w = z.max[0] - z.min[0], d = z.max[2] - z.min[2];
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: new THREE.Color(this.teamColors[team]) }, uSize: { value: new THREE.Vector2(w, d) } },
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: `uniform vec3 uColor; uniform vec2 uSize; varying vec2 vUv;
+          void main(){
+            vec2 p = vUv * uSize;
+            float edge = min(min(p.x, uSize.x - p.x), min(p.y, uSize.y - p.y));
+            float border = smoothstep(0.22, 0.0, edge);
+            float dash = step(0.45, fract((p.x + p.y) * 0.5));
+            float stripe = step(0.5, fract((p.x + p.y) * 0.9)) * 0.1;
+            vec3 col = mix(uColor, vec3(1.0), border * 0.6);
+            gl_FragColor = vec4(col, border * (0.5 + 0.4 * dash) + stripe);
+          }`,
+      });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), mat);
+      mesh.position.set((z.min[0] + z.max[0]) / 2, 0.03, (z.min[2] + z.max[2]) / 2);
+      mesh.renderOrder = 3;
+      this.arena.group.add(mesh);
+    }
+  }
+
   _damage(victim, attacker, amount) {
     if (!this.isHost || victim.shield > 0 || !victim.alive || this.phase !== 'play') return;
+    if (this.inSafe(victim)) return; // 出撃エリアの中は安全(リスポーン狩り対策)
     victim.hp = Math.max(0, victim.hp - amount);
     this.net.send({ k: 'hp', i: victim.idx, hp: victim.hp });
     this.fx.hit?.(victim, attacker);

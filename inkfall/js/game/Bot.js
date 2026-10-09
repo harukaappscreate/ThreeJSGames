@@ -6,6 +6,7 @@
 // =========================================================
 import * as THREE from 'three';
 import { Arena } from './Arena.js';
+import { CONFIG } from '../config.js';
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
 const DIRS = [
@@ -14,11 +15,12 @@ const DIRS = [
 ];
 
 export class Bot {
-  constructor(actor, match, { kind = 'turf', skill = 0.7 } = {}) {
+  constructor(actor, match, { kind = 'turf', level = 'normal' } = {}) {
     this.a = actor;
     this.m = match;
     this.kind = kind;
-    this.skill = skill;
+    this.L = CONFIG.cpu[level] || CONFIG.cpu.normal;
+    this.skill = this.L.skill;
     this.think = Math.random();
     this.target = null;       // { pos, normal, cell }
     this.enemy = null;
@@ -96,12 +98,21 @@ export class Bot {
     return Math.abs(_c.dot(a.up) + 0.5) < 0.6;
   }
 
+  /** 同じチームの CPU のうち、o をねらっている数 */
+  _focusOn(o) {
+    let n = 0;
+    for (const x of this.m.actors) if (x !== this.a && x.brain && x.team === this.a.team && x.brain.enemy === o) n++;
+    return n;
+  }
+
   _nearestEnemy(range, needLos = true) {
     let best = null, bd = range;
     for (const o of this.m.actors) {
-      // 復活直後の無敵中の相手はねらわない
-      if (o === this.a || !o.alive || o.out || o.team === this.a.team || o.shield > 0) continue;
+      // 復活直後の無敵中・出撃エリアにいる相手はねらわない(リスポーン狩りをしない)
+      if (o === this.a || !o.alive || o.out || o.team === this.a.team || o.shield > 0 || this.m.inSafe(o) || this.m.freshSpawn(o)) continue;
       const d = o.pos.distanceTo(this.a.pos);
+      // 1 人を大勢で囲まない(すぐ近くにいる相手だけは例外)
+      if (d > 4 && this._focusOn(o) >= this.L.focus) continue;
       if (d < bd && (!needLos || this.m.arena.lineOfSight(this.a.pos, o.pos))) { bd = d; best = o; }
     }
     return best;
@@ -113,11 +124,11 @@ export class Bot {
     if (this.think <= 0) {
       this.think = 0.6 + Math.random() * 0.8;
       const prev = this.enemy;
-      this.enemy = this._nearestEnemy(16);
-      if (this.enemy && this.enemy !== prev) this.react = 0.35 + (1 - this.skill) * 0.6 + Math.random() * 0.25;
+      this.enemy = this._nearestEnemy(this.L.range);
+      if (this.enemy && this.enemy !== prev) this.react = (0.35 + (1 - this.skill) * 0.6 + Math.random() * 0.25) * this.L.react;
       if (!this.target || Math.random() < 0.35 || (this.target.cell >= 0 && arena.owner[this.target.cell] === a.team)) this._pickTarget();
     }
-    if (this.enemy && (!this.enemy.alive || this.enemy.out || this.enemy.shield > 0 || this.enemy.pos.distanceTo(a.pos) > 22)) this.enemy = null;
+    if (this.enemy && (!this.enemy.alive || this.enemy.out || this.enemy.shield > 0 || m.inSafe(this.enemy) || m.freshSpawn(this.enemy) || this.enemy.pos.distanceTo(a.pos) > this.L.range + 6)) this.enemy = null;
 
     // 移動
     if (this.target) {
@@ -167,7 +178,7 @@ export class Bot {
     // 照準がだいたい向いているときだけ撃つ
     _b.subVectors(e.pos, a.pos).normalize();
     if (a.aim.dot(_b) < 0.94) return;
-    if (this.burst > 0) { this.burst -= dt; this.fireWant = true; if (this.burst <= 0) this.rest = 0.3 + Math.random() * 0.5; }
+    if (this.burst > 0) { this.burst -= dt; this.fireWant = true; if (this.burst <= 0) this.rest = (0.3 + Math.random() * 0.5) * this.L.rest; }
     else if ((this.rest -= dt) <= 0) this.burst = 0.45 + Math.random() * 0.6;
   }
 
@@ -180,6 +191,8 @@ export class Bot {
       const o = arena.owner[c];
       if (o === Arena.DISABLED) continue;
       arena.cellCenter(c, p);
+      // 相手の出撃エリアには入らない
+      if (this.m.nearZone(p, a.team === 1 ? 2 : 1, CONFIG.spawnCare.margin)) continue;
       arena.cellNormalVec(c, n);
       const d = p.distanceTo(a.pos);
       let s = (o === a.team ? -3 : o === 0 ? 2 : 3) - d * 0.06 + Math.random();
@@ -219,7 +232,7 @@ export class Bot {
         _a.subVectors(a.pos, holder.pos).add(a.pos);
         this._moveToward(_a, dt);
         if (d < 5 && a.grounded && a.flipCD <= 0 && this.think <= 0) { this.think = 0.8; this._randomFlip(); }
-        if (d < 2.6 && Math.random() < dt * 3) m.shove(a);
+        if (d < 2.6 && Math.random() < dt * (1 + this.skill * 2.5)) m.shove(a);
       } else if (this.think <= 0) {
         this.think = 1;
         this.wander = a.pos.clone().addScaledVector(new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(), 5);
